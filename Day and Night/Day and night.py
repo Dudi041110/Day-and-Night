@@ -4,26 +4,45 @@ import random
 import os
 
 pygame.init()
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and PyInstaller """
+    if hasattr(sys, "_MEIPASS"):  # Running from PyInstaller bundle
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.dirname(__file__), relative_path)
+
+# Window setup
 pygame.display.set_caption("Day and Night")
 screen = pygame.display.set_mode((1920, 1080))
-
 clock = pygame.time.Clock()
 
+# Fonts
 fps_font = pygame.font.SysFont(None, 30)
-font_path = os.path.join(os.path.dirname(__file__), "Assets", "PixelatedPusab.ttf")
+font_path = resource_path(os.path.join("Assets", "PixelatedPusab.ttf"))
 font = pygame.font.Font(font_path, 48)
 
-full_heart = pygame.transform.scale((pygame.image.load(os.path.join(os.path.dirname(__file__), "Assets", "full heart.png")).convert_alpha()), (75, 75))
-half_heart = pygame.transform.scale((pygame.image.load(os.path.join(os.path.dirname(__file__), "Assets", "half heart.png")).convert_alpha()), (75, 75))
-empty_heart = pygame.transform.scale((pygame.image.load(os.path.join(os.path.dirname(__file__), "Assets", "empty heart.png")).convert_alpha()), (75, 75))
+# Hearts
+full_heart = pygame.transform.scale(
+    pygame.image.load(resource_path(os.path.join("Assets", "full heart.png"))).convert_alpha(), 
+    (75, 75)
+)
+half_heart = pygame.transform.scale(
+    pygame.image.load(resource_path(os.path.join("Assets", "half heart.png"))).convert_alpha(), 
+    (75, 75)
+)
+empty_heart = pygame.transform.scale(
+    pygame.image.load(resource_path(os.path.join("Assets", "empty heart.png"))).convert_alpha(), 
+    (75, 75)
+)
 
 health = 6
 
-GraveStone = pygame.image.load(os.path.join(os.path.dirname(__file__), "Assets", "GraveStone.png")).convert_alpha()
+# GraveStone
+GraveStone = pygame.image.load(resource_path(os.path.join("Assets", "GraveStone.png"))).convert_alpha()
 GraveStone_height, GraveStone_width = GraveStone.get_height(), GraveStone.get_width()
 GraveStone = pygame.transform.scale(GraveStone, (GraveStone_width // 1.75, GraveStone_height // 1.75))
 
-sheet = pygame.image.load(os.path.join(os.path.dirname(__file__), "Assets", "gosth.png")).convert_alpha()
+# Ghost sheet + sprites
+sheet = pygame.image.load(resource_path(os.path.join("Assets", "gosth.png"))).convert_alpha()
 
 ghost_sprites = []
 ghost_x, ghost_y = 500, 730

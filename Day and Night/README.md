@@ -9,9 +9,7 @@ Currently I'm working on the combat system so I guess you should come back here 
 Anyways you probably want to know how to run it so here:
 # How to run the file
 After extracting the folder.
-Open the dist folder and run the .exe file you see.
-Its not a virus.
-I promise.
+Run the .exe file within dist ()
 # How to edit the file
 After extracting the folder.
 Download python from https://www.python.org/downloads/ (skip this step if python is already downloaded)

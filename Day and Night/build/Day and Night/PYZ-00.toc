@@ -1,5 +1,5 @@
-('C:\\Users\\adami\\.vscode\\Coding\\Github projects ^-^\\Day and '
- 'Night\\build\\Day and Night\\PYZ-00.pyz',
+('C:\\Users\\adami\\OneDrive\\Documents\\GitHub\\Day-and-Night\\Day and '
+ 'Night\\build\\Day and night\\PYZ-00.pyz',
  [('__future__',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\\Lib\\__future__.py',

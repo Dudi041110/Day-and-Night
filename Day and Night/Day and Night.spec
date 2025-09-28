@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['Day and Night.py'],
+    ['Day and night.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('Assets', 'Assets')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='Day and Night',
+    name='Day and night',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
