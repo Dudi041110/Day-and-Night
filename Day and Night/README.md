@@ -12,4 +12,8 @@ After extracting the folder.
 Open the dist folder and run the .exe file you see.
 Its not a virus.
 I promise.
+# How to edit the file
+After extracting the folder.
+Download python from https://www.python.org/downloads/ (skip this step if python is already downloaded)
+Then open command prompt and run pip install -r requirements.txt (if that doesn't work then run cd "path to the 2nd Day and Night folder" then try to run the command again)
 K. Toodles.
