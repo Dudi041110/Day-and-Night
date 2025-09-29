@@ -3,24 +3,23 @@ import sys
 import random
 import os
 
+version = "1.0.1"
+
 pygame.init()
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and PyInstaller """
-    if hasattr(sys, "_MEIPASS"):  # Running from PyInstaller bundle
+    if hasattr(sys, "_MEIPASS"):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.dirname(__file__), relative_path)
 
-# Window setup
 pygame.display.set_caption("Day and Night")
 screen = pygame.display.set_mode((1920, 1080))
 clock = pygame.time.Clock()
 
-# Fonts
 fps_font = pygame.font.SysFont(None, 30)
 font_path = resource_path(os.path.join("Assets", "PixelatedPusab.ttf"))
 font = pygame.font.Font(font_path, 48)
 
-# Hearts
 full_heart = pygame.transform.scale(
     pygame.image.load(resource_path(os.path.join("Assets", "full heart.png"))).convert_alpha(), 
     (75, 75)
@@ -35,21 +34,23 @@ empty_heart = pygame.transform.scale(
 )
 
 health = 6
+damage_cooldown = 0
 
-# GraveStone
 GraveStone = pygame.image.load(resource_path(os.path.join("Assets", "GraveStone.png"))).convert_alpha()
 GraveStone_height, GraveStone_width = GraveStone.get_height(), GraveStone.get_width()
 GraveStone = pygame.transform.scale(GraveStone, (GraveStone_width // 1.75, GraveStone_height // 1.75))
 
-# Ghost sheet + sprites
 sheet = pygame.image.load(resource_path(os.path.join("Assets", "gosth.png"))).convert_alpha()
 
 ghost_sprites = []
-ghost_x, ghost_y = 500, 730
+ghost_x, ghost_y = 500, 720
 for i in range(4):
     x = i * 25
     frame = sheet.subsurface(pygame.Rect(x, 0, 25, 25))
     ghost_sprites.append(pygame.transform.scale(frame, (200, 200)))
+
+ghost_direction = "right"
+ghost_hurtbox = pygame.Rect(ghost_x + 32, ghost_y + 32, 120, 136)
 
 room = 3
 
@@ -68,7 +69,7 @@ attack = pygame.Rect(0, 0, 0, 0)
 delayed_attack = pygame.Rect(0, 0, 0, 0)
 
 def player_movement():
-    global player_x, player_y, player_y_velocity, repeat
+    global player_x, player_y, player_y_velocity, repeat, damage_cooldown, health
     
     player_hurtbox = pygame.Rect(player_x - 10, player_y - 10, player_border_side_length, player_border_side_length )
     player_ground_hitbox = pygame.Rect(player_x + 15, player_y, player_border_side_length - 30, player_border_side_length,)
@@ -111,6 +112,11 @@ def player_movement():
         player_y_velocity = 0
     else:
         player_y_velocity -= 0.1
+    if player_hurtbox.colliderect(ghost_hurtbox) and damage_cooldown <= 0:
+        health -= 1
+        damage_cooldown = 400
+    damage_cooldown -= 1
+    print(damage_cooldown)
 
 def decorations():
     if room == 3:
@@ -119,7 +125,17 @@ def decorations():
 def ghost_ai():
     global ghost_hurtbox, ghost_x, ghost_y, ghost_direction
     ghost_hurtbox = pygame.Rect(ghost_x + 32, ghost_y + 32, 120, 136)
-
+    if room == 3:
+        if ghost_direction == "right":
+                ghost_x += 1
+                screen.blit(ghost_sprites[0], (ghost_x, ghost_y))
+                if ghost_x >= 1350:
+                    ghost_direction = "left"
+        else:
+            ghost_x -= 1
+            screen.blit(ghost_sprites[1], (ghost_x, ghost_y))
+            if ghost_x <= 500:
+                ghost_direction = "right"
 
 def fighting():
     global Attack_timer, attack, left_fist, right_fist, top_fist, delayed_attack
@@ -130,7 +146,6 @@ def fighting():
 
     keys = pygame.key.get_pressed()
 
-    # Only start a new attack if no attack is active
     if Attack_timer <= 0:
         if keys[pygame.K_j]:
             attack = left_fist
@@ -145,11 +160,10 @@ def fighting():
             delayed_attack = top_fist
             Attack_timer = 20
 
-    # Countdown timer
     if Attack_timer > 0:
         Attack_timer -= 1
     else:
-        attack = pygame.Rect(0, 0, 0, 0)  # Clear attack
+        attack = pygame.Rect(0, 0, 0, 0)
         delayed_attack = None
 
     return attack
@@ -218,8 +232,12 @@ def fps_counter():
 def draw():
     sky()
     decorations()
-    pygame.draw.rect(screen, (173, 116, 17), (player_x - 10, player_y - 10, player_border_side_length, player_border_side_length), border_radius = 20)
-    pygame.draw.rect(screen, (255, 171, 25), (player_x - 2.5, player_y - 2.5, player_side_length + 5, player_side_length + 5), border_radius = 20)
+    if damage_cooldown > 0:
+        pygame.draw.rect(screen, (205, 105, 45), (player_x - 10, player_y - 10, player_border_side_length, player_border_side_length), border_radius = 20)
+        pygame.draw.rect(screen, (250, 135, 70), (player_x - 2.5, player_y - 2.5, player_side_length + 5, player_side_length + 5), border_radius = 20)
+    else:
+        pygame.draw.rect(screen, (173, 116, 17), (player_x - 10, player_y - 10, player_border_side_length, player_border_side_length), border_radius = 20)
+        pygame.draw.rect(screen, (255, 171, 25), (player_x - 2.5, player_y - 2.5, player_side_length + 5, player_side_length + 5), border_radius = 20)
     pygame.draw.rect(screen, (255, 213, 102), fighting(), border_radius = 20)
     for ground in room_ground[room]:
         pygame.draw.rect(screen, (0, 204, 68), ground,)
