@@ -1,13 +1,12 @@
 import pygame
 import sys
-import random
+import math
 import os
 
-version = "1.0.3"
+version = "0.0.4"
 
 pygame.init()
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and PyInstaller """
     if hasattr(sys, "_MEIPASS"):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.dirname(__file__), relative_path)
@@ -20,18 +19,9 @@ fps_font = pygame.font.SysFont(None, 30)
 font_path = resource_path(os.path.join("Assets", "PixelatedPusab.ttf"))
 font = pygame.font.Font(font_path, 48)
 
-full_heart = pygame.transform.scale(
-    pygame.image.load(resource_path(os.path.join("Assets", "full heart.png"))).convert_alpha(), 
-    (75, 75)
-)
-half_heart = pygame.transform.scale(
-    pygame.image.load(resource_path(os.path.join("Assets", "half heart.png"))).convert_alpha(), 
-    (75, 75)
-)
-empty_heart = pygame.transform.scale(
-    pygame.image.load(resource_path(os.path.join("Assets", "empty heart.png"))).convert_alpha(), 
-    (75, 75)
-)
+full_heart = pygame.transform.scale(pygame.image.load(resource_path(os.path.join("Assets", "full heart.png"))).convert_alpha(), (75, 75))
+half_heart = pygame.transform.scale(pygame.image.load(resource_path(os.path.join("Assets", "half heart.png"))).convert_alpha(), (75, 75))
+empty_heart = pygame.transform.scale(pygame.image.load(resource_path(os.path.join("Assets", "empty heart.png"))).convert_alpha(), (75, 75))
 
 Tree = pygame.image.load(resource_path(os.path.join("Assets", "02d79efe95b119bded88c1c16fa8985e-removebg-preview.png"))).convert_alpha()
 Warning_sign = pygame.transform.scale(pygame.image.load(resource_path(os.path.join("Assets", "pixilart-drawing.png"))).convert_alpha(),(500, 500))
@@ -41,6 +31,17 @@ end_screen_cooldown = 0
 
 health = 6
 damage_cooldown = 0
+
+Lives = 5
+
+Skeleton_scaffolding = pygame.image.load(resource_path(os.path.join("Assets", "h8wfw2.png"))).convert_alpha()
+skeleton_arm = pygame.Rect(0, 0, 0, 0)
+skeleton_arm_x, skeleton_arm_y, skeleton_arm_rotation = 1150, 75, -35
+skeleton_arm_end_x, skeleton_arm_end_y = skeleton_arm_x, skeleton_arm_y
+skeleton_arm_damage_cooldown = 0
+arm_length = 200
+arm_tip_rect = pygame.Rect(skeleton_arm_end_x - 10, skeleton_arm_end_y - 10, 20, 20)
+arm_hit_cooldown = 0
 
 GraveStone = pygame.image.load(resource_path(os.path.join("Assets", "GraveStone.png"))).convert_alpha()
 GraveStone_height, GraveStone_width = GraveStone.get_height(), GraveStone.get_width()
@@ -65,7 +66,7 @@ ghost_rising = False
 ghost_rising_progress = 0
 ghost_respawn_y = 720
 
-room = 5
+room = 7
 
 points = 0
 
@@ -75,7 +76,8 @@ room_ground = {
     3: [pygame.Rect(0, 500, 300, 580), pygame.Rect(0, 700, 550, 380), pygame.Rect(0, 900, 1920, 180), pygame.Rect(1500, 750, 420, 330)],
     4: [pygame.Rect(0, 750, 1920, 330)],
     5: [pygame.Rect(0, 750, 710,  330), pygame.Rect(1210, 750, 210, 330), pygame.Rect(1420, 950, 500, 130)],
-    6: [pygame.Rect(0, 950, 1920, 130)]
+    6: [pygame.Rect(0, 950, 1920, 130)],
+    7: [pygame.Rect(0, 950, 400, 130), pygame.Rect(600, 700, 300, 200), pygame.Rect(800, 400, 300, 200),pygame.Rect(800, 400, 1900, 75), pygame.Rect(1600, 400, 75, 1900), pygame.Rect(600, 800, 700, 75), pygame.Rect(1225, 400, 75, 475), pygame.Rect(400, 0, 75, 500)]
 }
 
 player_x, player_y, player_side_length, player_border_side_length, player_y_velocity = 200,  50, 100, 120, 0
@@ -86,18 +88,19 @@ delayed_attack = pygame.Rect(0, 0, 0, 0)
 
 def player_movement():
     global player_x, player_y, player_y_velocity, repeat, damage_cooldown, health, points
-    
+
     player_hurtbox = pygame.Rect(player_x - 10, player_y - 10, player_border_side_length, player_border_side_length )
     player_ground_hitbox = pygame.Rect(player_x + 15, player_y, player_border_side_length - 30, player_border_side_length,)
     player_right_side_hitbox = pygame.Rect(player_x + player_side_length, player_y + 10, 10, player_side_length - 20)
     player_left_side_hitbox = pygame.Rect(player_x - 10, player_y + 10, 10, player_side_length - 20)
+    player_ceiling_hitbox = pygame.Rect(player_x + 15, player_y - 10, player_border_side_length - 30, 10)
 
     on_ground = False
     for ground in room_ground[room]:
         if player_ground_hitbox.colliderect(ground):
             on_ground = True
             break
-    
+
     right_side_touching = False
     for ground in room_ground[room]:
         if player_right_side_hitbox.colliderect(ground):
@@ -108,6 +111,12 @@ def player_movement():
     for ground in room_ground[room]:
         if player_left_side_hitbox.colliderect(ground):
             left_side_touching = True
+            break
+
+    ceiling_touching = False
+    for ground in room_ground[room]:
+        if player_ceiling_hitbox.colliderect(ground):
+            ceiling_touching = True
             break
 
     keys = pygame.key.get_pressed()
@@ -122,17 +131,85 @@ def player_movement():
         repeat = 0
     else:
         repeat = 5
-    
+
     player_y -= player_y_velocity
+
+    if ceiling_touching and player_y_velocity > 0:
+        player_y_velocity = 0
+        for ground in room_ground[room]:
+            if player_ceiling_hitbox.colliderect(ground):
+                player_y = ground.bottom + 10
+
     if on_ground:
         player_y_velocity = 0
     else:
         player_y_velocity -= 0.1
-    if player_hurtbox.colliderect(ghost_hurtbox) and damage_cooldown <= 0:
+
+    if (player_hurtbox.colliderect(ghost_hurtbox) or player_hurtbox.colliderect(arm_tip_rect)) and damage_cooldown <= 0:
         health -= 1
-        damage_cooldown = 400
+        damage_cooldown = 800
         points -= 100
     damage_cooldown -= 1
+
+def Skeleton_arm_ai():
+    global skeleton_arm_x, skeleton_arm_y, skeleton_arm_end_x, skeleton_arm_end_y, player_x, player_y, health, skeleton_arm_damage_cooldown, arm_hit_cooldown, arm_tip_rect
+
+    if room == 6:
+        arm_tip_rect = pygame.Rect(skeleton_arm_end_x - 10, skeleton_arm_end_y - 10, 20, 20)
+        dx = (player_x + 50) - skeleton_arm_x
+        dy = (player_y + 50) - skeleton_arm_y
+        distance = math.hypot(dx, dy)
+        speed = 2
+
+        if distance > 0:
+            move_x = (dx / distance) * min(speed, distance)
+            move_y = (dy / distance) * min(speed, distance)
+            skeleton_arm_x += move_x
+            skeleton_arm_y += move_y
+
+        dx = (player_x + player_side_length // 2) - skeleton_arm_x
+        dy = (player_y + player_side_length // 2) - skeleton_arm_y
+        distance = math.hypot(dx, dy)
+        if distance == 0:
+            distance = 1
+
+        arm_length = 200
+        skeleton_arm_end_x = skeleton_arm_x + (dx / distance) * arm_length
+        skeleton_arm_end_y = skeleton_arm_y + (dy / distance) * arm_length
+
+        pygame.draw.line(screen, (200, 200, 200), (skeleton_arm_x, skeleton_arm_y), (skeleton_arm_end_x, skeleton_arm_end_y), 20)
+
+        player_center = (player_x + player_side_length // 2, player_y + player_side_length // 2)
+        x1, y1 = skeleton_arm_x, skeleton_arm_y
+        x2, y2 = skeleton_arm_end_x, skeleton_arm_end_y
+        px, py = player_center
+
+        line_mag = math.hypot(x2 - x1, y2 - y1)
+        if line_mag == 0:
+            line_mag = 1
+        u = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / (line_mag ** 2)
+        u = max(0, min(1, u))
+        closest_x = x1 + u * (x2 - x1)
+        closest_y = y1 + u * (y2 - y1)
+        dist_to_line = math.hypot(px - closest_x, py - closest_y)
+
+        arm_thickness = 20
+
+        if dist_to_line < (arm_thickness // 2 + player_side_length // 2) and skeleton_arm_damage_cooldown <= 0:
+            health -= 1
+            skeleton_arm_damage_cooldown = 800
+            arm_hit_cooldown = 800
+            skeleton_arm_x, skeleton_arm_y = 1150, 75
+        elif dist_to_line < (arm_thickness // 2 + player_side_length // 2):
+            skeleton_arm_x, skeleton_arm_y = 1150, 75            
+
+        if skeleton_arm_damage_cooldown > 0:
+            skeleton_arm_damage_cooldown -= 1
+        if arm_hit_cooldown > 0:
+            arm_hit_cooldown -= 1
+    else:
+        skeleton_arm_x, skeleton_arm_y = 1150, 75
+        arm_tip_rect = pygame.Rect(0, 0, 0, 0)
 
 def decorations():
     if room == 1:
@@ -146,9 +223,13 @@ def decorations():
         screen.blit(Tree, (1500, 300))
     elif room == 5:
         screen.blit(pygame.transform.rotate(Warning_sign, 60), (710, 515))
+    elif room == 6:
+        screen.blit(pygame.transform.scale(Skeleton_scaffolding, (1024, 768)), (750, 215))
+        screen.blit(GraveStone, (200, 700))
+        pygame.draw.rect(screen, (255, 0, 0), (1150, 75, 200, 250))
 
 def ghost_ai():
-    global ghost_hurtbox, ghost_x, ghost_y, ghost_direction, ghost_alive, Ghost_respawn_timer, ghost_lowering, ghost_lowering_progress, ghost_rising, ghost_rising_progress, ghost_respawn_y, points, room
+    global ghost_hurtbox, ghost_x, ghost_y, ghost_direction, ghost_alive, Ghost_respawn_timer, ghost_lowering, ghost_lowering_progress, ghost_rising, ghost_rising_progress, ghost_respawn_y, points, room, health
 
     if room == 3:
         if ghost_alive:
@@ -197,6 +278,8 @@ def ghost_ai():
             ghost_lowering_progress = 0
             Ghost_respawn_timer = 1000
             points += 150
+            if not health == 6:
+                health += 1
     else:
         if Ghost_respawn_timer <= 0 and not ghost_rising and not ghost_lowering:
             ghost_rising = True
@@ -234,8 +317,6 @@ def fighting():
 
     return attack
 
-    
-
 def room_change():
     global room, player_x, player_y
     if player_x + 50 >= 1920:
@@ -247,7 +328,7 @@ def room_change():
 
 def sky():
     global room, day
-    if room in (1, 2, 4, 5):
+    if room in (1, 2, 4, 5, 7):
         day = True
         screen.fill((208, 246, 255))
         pygame.draw.circle(screen, (255, 243, 128), (50, 50), 150)
@@ -315,14 +396,18 @@ def end_screen(cooldown):
     else:
         screen.blit(info_text, (screen.get_width() // 2 - info_text.get_width() // 2, 500))
     screen.blit(end_text, (screen.get_width() // 2 - end_text.get_width() // 2, 400))
+    screen.blit(font.render(f"Points: {points}", True, (255, 255, 255)), (10, 10))
     pygame.display.flip()
 
 def reset_game():
-    global health, points, player_x, player_y, player_y_velocity, room, ghost_x, ghost_y, ghost_direction, ghost_alive, Ghost_respawn_timer, ghost_lowering, ghost_lowering_progress, ghost_rising, ghost_rising_progress, ghost_respawn_y, damage_cooldown
+    global health, points, player_x, player_y, player_y_velocity, room, ghost_x, ghost_y, ghost_direction, ghost_alive, Ghost_respawn_timer, ghost_lowering, ghost_lowering_progress, ghost_rising, ghost_rising_progress, ghost_respawn_y, damage_cooldown, skeleton_arm_end_x, skeleton_arm_end_y, skeleton_arm_damage_cooldown
     health = 6
-    points = 0
+    points -= 500
     player_x, player_y, player_y_velocity = 200, 50, 0
-    room = 4
+    if room < 4:
+        room = 1
+    elif room >= 4:
+        room = 4
     ghost_x, ghost_y = 500, 720
     ghost_direction = "right"
     ghost_alive = True
@@ -333,11 +418,13 @@ def reset_game():
     ghost_rising_progress = 0
     ghost_respawn_y = 720
     damage_cooldown = 0
+    skeleton_arm_end_x, skeleton_arm_end_y = skeleton_arm_x, skeleton_arm_y
+    skeleton_arm_damage_cooldown = 0
 
 def draw():
     sky()
     decorations()
-    if damage_cooldown > 0:
+    if damage_cooldown > 0 or arm_hit_cooldown > 0:
         pygame.draw.rect(screen, (205, 105, 45), (player_x - 10, player_y - 10, player_border_side_length, player_border_side_length), border_radius = 20)
         pygame.draw.rect(screen, (250, 135, 70), (player_x - 2.5, player_y - 2.5, player_side_length + 5, player_side_length + 5), border_radius = 20)
     else:
@@ -352,6 +439,7 @@ def draw():
         screen.blit(font.render(f"Points: {points}", True, (255, 255, 255)), (10, 10))
     health_bar()
     ghost_ai()
+    Skeleton_arm_ai()
     fps_counter()
     pygame.display.flip()
 
