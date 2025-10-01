@@ -3,7 +3,7 @@ import sys
 import math
 import os
 
-version = "0.0.4"
+version = "0.0.5"
 
 pygame.init()
 def resource_path(relative_path):
@@ -24,6 +24,8 @@ half_heart = pygame.transform.scale(pygame.image.load(resource_path(os.path.join
 empty_heart = pygame.transform.scale(pygame.image.load(resource_path(os.path.join("Assets", "empty heart.png"))).convert_alpha(), (75, 75))
 
 Tree = pygame.image.load(resource_path(os.path.join("Assets", "02d79efe95b119bded88c1c16fa8985e-removebg-preview.png"))).convert_alpha()
+Resized_tree = pygame.transform.scale(Tree, (384, 453))
+
 Warning_sign = pygame.transform.scale(pygame.image.load(resource_path(os.path.join("Assets", "pixilart-drawing.png"))).convert_alpha(),(500, 500))
 
 game_over = False
@@ -32,7 +34,7 @@ end_screen_cooldown = 0
 health = 6
 damage_cooldown = 0
 
-Lives = 5
+Lives = 10
 
 Skeleton_scaffolding = pygame.image.load(resource_path(os.path.join("Assets", "h8wfw2.png"))).convert_alpha()
 skeleton_arm = pygame.Rect(0, 0, 0, 0)
@@ -66,9 +68,10 @@ ghost_rising = False
 ghost_rising_progress = 0
 ghost_respawn_y = 720
 
-room = 7
+room = 1
 
 points = 0
+perma_points = 0
 
 room_ground = {
     1: [pygame.Rect(0, 750, 1920, 330), pygame.Rect(0, 0, 20, 1080)],
@@ -77,7 +80,10 @@ room_ground = {
     4: [pygame.Rect(0, 750, 1920, 330)],
     5: [pygame.Rect(0, 750, 710,  330), pygame.Rect(1210, 750, 210, 330), pygame.Rect(1420, 950, 500, 130)],
     6: [pygame.Rect(0, 950, 1920, 130)],
-    7: [pygame.Rect(0, 950, 400, 130), pygame.Rect(600, 700, 300, 200), pygame.Rect(800, 400, 300, 200),pygame.Rect(800, 400, 1900, 75), pygame.Rect(1600, 400, 75, 1900), pygame.Rect(600, 800, 700, 75), pygame.Rect(1225, 400, 75, 475), pygame.Rect(400, 0, 75, 500)]
+    7: [pygame.Rect(0, 950, 400, 130), pygame.Rect(600, 700, 300, 200), pygame.Rect(800, 400, 300, 200),pygame.Rect(800, 400, 1900, 75), pygame.Rect(1600, 400, 75, 1900), pygame.Rect(600, 800, 700, 75), pygame.Rect(1225, 400, 75, 475), pygame.Rect(400, 0, 75, 500)],\
+    8: [pygame.Rect(0, 400, 250, 680), pygame.Rect(700, 400, 450, 680), pygame.Rect(1800, 900, 120, 180)],
+    9: [pygame.Rect(0, 900, 1920, 180), pygame.Rect(400, 600, 250, 580), pygame.Rect(400, 750, 1100, 330), pygame.Rect(1500, 600, 420, 580)],
+    10: [pygame.Rect(0, 600, 1920, 480), pygame.Rect(384, 500, 384, 580), pygame.Rect(1152, 500, 384, 580)]
 }
 
 player_x, player_y, player_side_length, player_border_side_length, player_y_velocity = 200,  50, 100, 120, 0
@@ -227,15 +233,17 @@ def decorations():
         screen.blit(pygame.transform.scale(Skeleton_scaffolding, (1024, 768)), (750, 215))
         screen.blit(GraveStone, (200, 700))
         pygame.draw.rect(screen, (255, 0, 0), (1150, 75, 200, 250))
+    elif room == 9:
+        screen.blit(pygame.transform.rotate(GraveStone, 90), (150, 650))
+    elif room == 10:
+        screen.blit(pygame.transform.flip(Resized_tree, 180, 0), (384, 50))
+        screen.blit(Resized_tree, (1152, 50))
 
 def ghost_ai():
-    global ghost_hurtbox, ghost_x, ghost_y, ghost_direction, ghost_alive, Ghost_respawn_timer, ghost_lowering, ghost_lowering_progress, ghost_rising, ghost_rising_progress, ghost_respawn_y, points, room, health
+    global ghost_hurtbox, ghost_x, ghost_y, ghost_direction, ghost_alive, Ghost_respawn_timer, ghost_lowering, ghost_lowering_progress, ghost_rising, ghost_rising_progress, ghost_respawn_y, points, room, health, perma_points, Lives
 
-    if room == 3:
-        if ghost_alive:
-            ghost_hurtbox = pygame.Rect(ghost_x + 32, ghost_y + 32, 120, 136)
-        else:
-            ghost_hurtbox = pygame.Rect(0, 0, 0, 0)
+    if (room == 3 or room == 9) and ghost_alive:
+        ghost_hurtbox = pygame.Rect(ghost_x + 32, ghost_y + 32, 120, 136)
     else:
         ghost_hurtbox = pygame.Rect(0, 0, 0, 0)
 
@@ -270,6 +278,38 @@ def ghost_ai():
                 ghost_y = ghost_respawn_y
         else:
             Ghost_respawn_timer -= 1
+    
+    elif room == 9:
+        if ghost_alive:
+            if ghost_direction == "right":
+                ghost_x += 1
+                screen.blit(ghost_sprites[0], (ghost_x, ghost_y))
+                if ghost_x >= 1330:
+                    ghost_direction = "left"
+            else:
+                ghost_x -= 1
+                screen.blit(ghost_sprites[1], (ghost_x, ghost_y))
+                if ghost_x <= 620:
+                    ghost_direction = "right"
+        elif ghost_lowering:
+            if ghost_lowering_progress < 60:
+                ghost_y += 2
+                ghost_lowering_progress += 1
+                screen.blit(ghost_sprites[2], (ghost_x, ghost_y))
+            else:
+                ghost_lowering = False
+            Ghost_respawn_timer -= 1
+        elif ghost_rising:
+            if ghost_rising_progress < 60:
+                ghost_y -= 2
+                ghost_rising_progress += 1
+                screen.blit(ghost_sprites[2], (ghost_x, ghost_y))
+            else:
+                ghost_rising = False
+                ghost_alive = True
+                ghost_y = ghost_respawn_y
+        else:
+            Ghost_respawn_timer -= 1
 
     if ghost_alive:
         if ghost_hurtbox.colliderect(attack):
@@ -278,12 +318,20 @@ def ghost_ai():
             ghost_lowering_progress = 0
             Ghost_respawn_timer = 1000
             points += 150
+            perma_points += 150
+            if perma_points >= 1000:
+                perma_points -= 1000
+                Lives += 1
             if not health == 6:
                 health += 1
     else:
         if Ghost_respawn_timer <= 0 and not ghost_rising and not ghost_lowering:
             ghost_rising = True
             ghost_rising_progress = 0
+            if room == 3:
+                ghost_respawn_y = 720
+            elif room == 9:
+                ghost_respawn_y = 575
             ghost_y = ghost_respawn_y + 120
 
 def fighting():
@@ -318,17 +366,29 @@ def fighting():
     return attack
 
 def room_change():
-    global room, player_x, player_y
+    global room, player_x, player_y, ghost_respawn_y, ghost_y
     if player_x + 50 >= 1920:
         room += 1
         player_x = 0
+        if room == 3:
+            ghost_respawn_y = 720
+            ghost_y = ghost_respawn_y
+        elif room == 9:
+            ghost_respawn_y = 575
+            ghost_y = ghost_respawn_y
     if player_x + 50 <= 0:
         room -= 1
         player_x = 1820
+        if room == 3:
+            ghost_respawn_y = 720
+            ghost_y = ghost_respawn_y
+        elif room == 9:
+            ghost_respawn_y = 575
+            ghost_y = ghost_respawn_y
 
 def sky():
     global room, day
-    if room in (1, 2, 4, 5, 7):
+    if room in (1, 2, 4, 5, 7, 8, 10):
         day = True
         screen.fill((208, 246, 255))
         pygame.draw.circle(screen, (255, 243, 128), (50, 50), 150)
@@ -390,13 +450,18 @@ def end_screen(cooldown):
     large_font = pygame.font.Font(font_path, 96)
     end_text = large_font.render("Game Over", True, (255, 255, 255))
     info_text = font.render("Press any key to restart", True, (255, 255, 255))
-    if cooldown > 0:
-        timer_text = font.render(f"Wait {cooldown // 1000 + 1} seconds...", True, (255, 100, 100))
-        screen.blit(timer_text, (screen.get_width() // 2 - timer_text.get_width() // 2, 600))
+    out_of_lives = font.render("Out of lives...", True, (255, 255, 255))
+    if Lives > 0:
+        if cooldown > 0:
+            timer_text = font.render(f"Wait {cooldown // 1000 + 1} seconds...", True, (255, 100, 100))
+            screen.blit(timer_text, (screen.get_width() // 2 - timer_text.get_width() // 2, 600))
+        else:
+            screen.blit(info_text, (screen.get_width() // 2 - info_text.get_width() // 2, 500))
     else:
-        screen.blit(info_text, (screen.get_width() // 2 - info_text.get_width() // 2, 500))
+        screen.blit(out_of_lives, (screen.get_width() // 2 - out_of_lives.get_width() // 2, 500))
     screen.blit(end_text, (screen.get_width() // 2 - end_text.get_width() // 2, 400))
     screen.blit(font.render(f"Points: {points}", True, (255, 255, 255)), (10, 10))
+    screen.blit(font.render(f"Lives: {Lives}", True, (255, 255, 255)), (1700, 20))
     pygame.display.flip()
 
 def reset_game():
@@ -406,8 +471,10 @@ def reset_game():
     player_x, player_y, player_y_velocity = 200, 50, 0
     if room < 4:
         room = 1
-    elif room >= 4:
+    elif room >= 4 and room < 8:
         room = 4
+    elif room >= 8:
+        room = 8
     ghost_x, ghost_y = 500, 720
     ghost_direction = "right"
     ghost_alive = True
@@ -435,8 +502,10 @@ def draw():
         pygame.draw.rect(screen, (0, 204, 68), ground,)
     if day:
         screen.blit(font.render(f"Points: {points}", True, (0, 0, 0)), (10, 10))
+        screen.blit(font.render(f"Lives: {Lives}", True, (0, 0, 0)), (1700, 20))
     else:
         screen.blit(font.render(f"Points: {points}", True, (255, 255, 255)), (10, 10))
+        screen.blit(font.render(f"Lives: {Lives}", True, (255, 255, 255)), (1700, 20))
     health_bar()
     ghost_ai()
     Skeleton_arm_ai()
@@ -465,6 +534,7 @@ while running:
             game_over = True
             end_screen_cooldown = 5000
             cooldown_start_time = pygame.time.get_ticks()
+            Lives -= 1
     else:
         if end_screen_cooldown > 0:
             elapsed = pygame.time.get_ticks() - cooldown_start_time
@@ -473,9 +543,11 @@ while running:
         for event in events:
             if event.type == pygame.QUIT:
                 running = False
-            elif (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN) and end_screen_cooldown == 0:
+            elif (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN) and end_screen_cooldown == 0 and Lives > 0:
                 reset_game()
                 game_over = False
+            elif Lives == 0:
+                break
 
     clock.tick(175)
 
