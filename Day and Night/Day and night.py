@@ -3,7 +3,7 @@ import sys
 import math
 import os
 
-version = "0.0.5"
+version = "0.0.6"
 
 pygame.init()
 def resource_path(relative_path):
@@ -34,7 +34,7 @@ end_screen_cooldown = 0
 health = 6
 damage_cooldown = 0
 
-Lives = 10
+Lives = 5
 
 Skeleton_scaffolding = pygame.image.load(resource_path(os.path.join("Assets", "h8wfw2.png"))).convert_alpha()
 skeleton_arm = pygame.Rect(0, 0, 0, 0)
@@ -44,6 +44,22 @@ skeleton_arm_damage_cooldown = 0
 arm_length = 200
 arm_tip_rect = pygame.Rect(skeleton_arm_end_x - 10, skeleton_arm_end_y - 10, 20, 20)
 arm_hit_cooldown = 0
+
+Frankenstein_y = 450
+Frankenstein_yvelocity = 0
+Frankenstein_cooldown = 200
+frankenstein_shockwave_left = None
+frankenstein_shockwave_right = None
+frankenstein_shockwave_active = False
+frankenstein_shockwave_timer = 0
+frankenstein_shockwave_speed = 5
+frankenstein_shockwave_width = 80
+frankenstein_shockwave_height = 40
+frankenstein_shockwave_damage_cooldown = 0
+Frankenstein_was_in_air = False
+frankenstein_health = 4
+frankenstein_hit_cooldown = 0
+frankenstein_dead = False
 
 GraveStone = pygame.image.load(resource_path(os.path.join("Assets", "GraveStone.png"))).convert_alpha()
 GraveStone_height, GraveStone_width = GraveStone.get_height(), GraveStone.get_width()
@@ -68,7 +84,7 @@ ghost_rising = False
 ghost_rising_progress = 0
 ghost_respawn_y = 720
 
-room = 1
+room = 13
 
 points = 0
 perma_points = 0
@@ -83,7 +99,11 @@ room_ground = {
     7: [pygame.Rect(0, 950, 400, 130), pygame.Rect(600, 700, 300, 200), pygame.Rect(800, 400, 300, 200),pygame.Rect(800, 400, 1900, 75), pygame.Rect(1600, 400, 75, 1900), pygame.Rect(600, 800, 700, 75), pygame.Rect(1225, 400, 75, 475), pygame.Rect(400, 0, 75, 500)],\
     8: [pygame.Rect(0, 400, 250, 680), pygame.Rect(700, 400, 450, 680), pygame.Rect(1800, 900, 120, 180)],
     9: [pygame.Rect(0, 900, 1920, 180), pygame.Rect(400, 600, 250, 580), pygame.Rect(400, 750, 1100, 330), pygame.Rect(1500, 600, 420, 580)],
-    10: [pygame.Rect(0, 600, 1920, 480), pygame.Rect(384, 500, 384, 580), pygame.Rect(1152, 500, 384, 580)]
+    10: [pygame.Rect(0, 600, 1920, 480), pygame.Rect(384, 500, 384, 580), pygame.Rect(1152, 500, 384, 580)],
+    11: [pygame.Rect(0, 600, 175, 480), pygame.Rect(175, 850, 1745, 230), pygame.Rect(384, 700, 384, 580), pygame.Rect(1152, 700, 384, 580)],
+    12: [pygame.Rect(0, 850, 350, 230), pygame.Rect(650, 550, 150, 150), pygame.Rect(1100, 350, 150, 150), pygame. Rect(1700, 350, 220, 730)],
+    13: [pygame.Rect(0, 350, 275, 730), pygame.Rect(1000, 980, 10, 100), pygame.Rect(1450, 780, 10, 300)],
+    14: [pygame.Rect(0, 980, 1200, 100)]
 }
 
 player_x, player_y, player_side_length, player_border_side_length, player_y_velocity = 200,  50, 100, 120, 0
@@ -137,6 +157,11 @@ def player_movement():
         repeat = 0
     else:
         repeat = 5
+
+    if room == 11 and not frankenstein_dead:
+        frankenstein_right = 860 + 200
+        if player_x + player_side_length > frankenstein_right:
+            player_x = frankenstein_right - player_side_length
 
     player_y -= player_y_velocity
 
@@ -321,7 +346,8 @@ def ghost_ai():
             perma_points += 150
             if perma_points >= 1000:
                 perma_points -= 1000
-                Lives += 1
+                if Lives < 9:
+                    Lives += 1
             if not health == 6:
                 health += 1
     else:
@@ -333,6 +359,97 @@ def ghost_ai():
             elif room == 9:
                 ghost_respawn_y = 575
             ghost_y = ghost_respawn_y + 120
+
+def Frankenstein_enemy():
+    global Frankenstein_y, Frankenstein_hitbox, Frankenstein_cooldown, Frankenstein_yvelocity
+    global frankenstein_shockwave_left, frankenstein_shockwave_right, frankenstein_shockwave_active, frankenstein_shockwave_timer, frankenstein_shockwave_damage_cooldown
+    global Frankenstein_was_in_air, health, damage_cooldown
+    global frankenstein_health, frankenstein_hit_cooldown, frankenstein_dead
+
+    ground_y = 450
+
+    if room == 11 and not frankenstein_dead:
+        Frankenstein_hitbox = pygame.Rect(860, Frankenstein_y, 200, 400)
+        Frankenstein_cooldown -= 1
+
+        if Frankenstein_y < ground_y:
+            Frankenstein_was_in_air = True
+
+        if Frankenstein_cooldown <= 0 and Frankenstein_y == ground_y:
+            Frankenstein_yvelocity = -7
+            Frankenstein_cooldown = 500
+
+        Frankenstein_y += Frankenstein_yvelocity
+        Frankenstein_yvelocity += 0.1
+
+        if Frankenstein_y > ground_y:
+            Frankenstein_y = ground_y
+            Frankenstein_yvelocity = 0
+            if Frankenstein_was_in_air:
+                if not frankenstein_shockwave_active:
+                    frankenstein_shockwave_left = pygame.Rect(860, Frankenstein_y + 400, frankenstein_shockwave_width, frankenstein_shockwave_height)
+                    frankenstein_shockwave_right = pygame.Rect(980 + 120, Frankenstein_y + 400, frankenstein_shockwave_width, frankenstein_shockwave_height)
+                    frankenstein_shockwave_active = True
+            Frankenstein_was_in_air = False
+
+        player_rect = pygame.Rect(player_x, player_y, player_side_length, player_side_length)
+        if Frankenstein_hitbox.colliderect(player_rect) and damage_cooldown <= 0:
+            health -= 1
+            damage_cooldown = 800
+
+        global attack
+        if Frankenstein_hitbox.colliderect(attack) and frankenstein_hit_cooldown <= 0:
+            frankenstein_health -= 1
+            frankenstein_hit_cooldown = 5000
+            if frankenstein_health <= 0:
+                frankenstein_dead = True
+
+        if frankenstein_hit_cooldown > 0:
+            frankenstein_hit_cooldown -= clock.get_time()
+
+    else:
+        Frankenstein_hitbox = pygame.Rect(0, 0, 0, 0)
+        Frankenstein_was_in_air = False
+
+    if frankenstein_shockwave_active and not frankenstein_dead:
+        frankenstein_shockwave_left.x -= frankenstein_shockwave_speed
+        frankenstein_shockwave_right.x += frankenstein_shockwave_speed
+
+        def get_ground_y(x):
+            ground_ys = []
+            for ground in room_ground[room]:
+                if ground.left <= x <= ground.right:
+                    ground_ys.append(ground.top)
+            if ground_ys:
+                return min(ground_ys) - frankenstein_shockwave_height
+            return 1080 - frankenstein_shockwave_height
+
+        frankenstein_shockwave_left.y = get_ground_y(frankenstein_shockwave_left.centerx)
+        frankenstein_shockwave_right.y = get_ground_y(frankenstein_shockwave_right.centerx)
+
+        pygame.draw.rect(screen, (255, 100, 0), frankenstein_shockwave_left)
+        pygame.draw.rect(screen, (255, 100, 0), frankenstein_shockwave_right)
+
+        player_rect = pygame.Rect(player_x, player_y, player_side_length, player_side_length)
+        if (frankenstein_shockwave_left.colliderect(player_rect) or frankenstein_shockwave_right.colliderect(player_rect)) and frankenstein_shockwave_damage_cooldown <= 0:
+            health -= 1
+            damage_cooldown = 800
+            frankenstein_shockwave_damage_cooldown = 30
+
+        if frankenstein_shockwave_damage_cooldown > 0:
+            frankenstein_shockwave_damage_cooldown -= 1
+
+        if (frankenstein_shockwave_left.right < 0 and frankenstein_shockwave_right.left > 1920):
+            frankenstein_shockwave_active = False
+
+    if not frankenstein_dead:
+        pygame.draw.rect(screen, (192, 192, 192), Frankenstein_hitbox)
+        bar_width = 200
+        bar_height = 20
+        bar_x = Frankenstein_hitbox.x
+        bar_y = Frankenstein_hitbox.y - 30
+        pygame.draw.rect(screen, (60, 60, 60), (bar_x, bar_y, bar_width, bar_height))
+        pygame.draw.rect(screen, (0, 255, 0), (bar_x, bar_y, int(bar_width * (frankenstein_health / 4)), bar_height))
 
 def fighting():
     global Attack_timer, attack, left_fist, right_fist, top_fist, delayed_attack
@@ -366,7 +483,7 @@ def fighting():
     return attack
 
 def room_change():
-    global room, player_x, player_y, ghost_respawn_y, ghost_y
+    global room, player_x, player_y, ghost_respawn_y, ghost_y, Frankenstein_cooldown
     if player_x + 50 >= 1920:
         room += 1
         player_x = 0
@@ -376,6 +493,8 @@ def room_change():
         elif room == 9:
             ghost_respawn_y = 575
             ghost_y = ghost_respawn_y
+        elif room == 11:
+            Frankenstein_cooldown = 300
     if player_x + 50 <= 0:
         room -= 1
         player_x = 1820
@@ -385,10 +504,12 @@ def room_change():
         elif room == 9:
             ghost_respawn_y = 575
             ghost_y = ghost_respawn_y
+        elif room == 11:
+            Frankenstein_cooldown = 300
 
 def sky():
     global room, day
-    if room in (1, 2, 4, 5, 7, 8, 10):
+    if room in (1, 2, 4, 5, 7, 8, 10, 12, 13, 14):
         day = True
         screen.fill((208, 246, 255))
         pygame.draw.circle(screen, (255, 243, 128), (50, 50), 150)
@@ -465,7 +586,7 @@ def end_screen(cooldown):
     pygame.display.flip()
 
 def reset_game():
-    global health, points, player_x, player_y, player_y_velocity, room, ghost_x, ghost_y, ghost_direction, ghost_alive, Ghost_respawn_timer, ghost_lowering, ghost_lowering_progress, ghost_rising, ghost_rising_progress, ghost_respawn_y, damage_cooldown, skeleton_arm_end_x, skeleton_arm_end_y, skeleton_arm_damage_cooldown
+    global health, points, player_x, player_y, player_y_velocity, room, ghost_x, ghost_y, ghost_direction, ghost_alive, Ghost_respawn_timer, ghost_lowering, ghost_lowering_progress, ghost_rising, ghost_rising_progress, ghost_respawn_y, damage_cooldown, skeleton_arm_end_x, skeleton_arm_end_y, skeleton_arm_damage_cooldown, frankenstein_shockwave_left, frankenstein_shockwave_right, frankenstein_shockwave_active, frankenstein_shockwave_timer, frankenstein_shockwave_damage_cooldown, frankenstein_health, frankenstein_hit_cooldown, frankenstein_dead
     health = 6
     points -= 500
     player_x, player_y, player_y_velocity = 200, 50, 0
@@ -473,8 +594,10 @@ def reset_game():
         room = 1
     elif room >= 4 and room < 8:
         room = 4
-    elif room >= 8:
+    elif room >= 8 and room < 12:
         room = 8
+    elif room >= 12:
+        room = 12
     ghost_x, ghost_y = 500, 720
     ghost_direction = "right"
     ghost_alive = True
@@ -487,6 +610,14 @@ def reset_game():
     damage_cooldown = 0
     skeleton_arm_end_x, skeleton_arm_end_y = skeleton_arm_x, skeleton_arm_y
     skeleton_arm_damage_cooldown = 0
+    frankenstein_shockwave_left = None
+    frankenstein_shockwave_right = None
+    frankenstein_shockwave_active = False
+    frankenstein_shockwave_timer = 0
+    frankenstein_shockwave_damage_cooldown = 0
+    frankenstein_health = 4
+    frankenstein_hit_cooldown = 0
+    frankenstein_dead = False
 
 def draw():
     sky()
@@ -507,6 +638,7 @@ def draw():
         screen.blit(font.render(f"Points: {points}", True, (255, 255, 255)), (10, 10))
         screen.blit(font.render(f"Lives: {Lives}", True, (255, 255, 255)), (1700, 20))
     health_bar()
+    Frankenstein_enemy()
     ghost_ai()
     Skeleton_arm_ai()
     fps_counter()
